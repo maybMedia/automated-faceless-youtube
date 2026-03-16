@@ -5,3 +5,4 @@
 *.example filter=lfs diff=lfs merge=lfs -text
 *.py filter=lfs diff=lfs merge=lfs -text
 *.txt filter=lfs diff=lfs merge=lfs -text
+/assets/ASSETS_GO_HERE filter=lfs diff=lfs merge=lfs -text
