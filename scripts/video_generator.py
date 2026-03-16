@@ -3,6 +3,8 @@ from pathlib import Path
 import math
 import textwrap
 
+from scripts.config import log_step
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FULL_VIDEO_PATH = PROJECT_ROOT / "temp" / "video_full.mp4"
 PART_VIDEO_TEMPLATE = "video_part{index:02}.mp4"
@@ -89,11 +91,15 @@ def create_video(subtitle_path="temp/captions.srt", output_path=None):
         str(target_path),
     ]
 
+    log_step(f"Starting ffmpeg render for full video at {target_path}.")
+    log_step(f"Using subtitles file {subtitle_path}.")
     subprocess.run(command, check=True)
+    log_step(f"Finished ffmpeg render for full video at {target_path}.")
     return target_path
 
 
 def _get_media_duration(path):
+    log_step(f"Probing media duration for {path}.")
     result = subprocess.run(
         [
             "ffprobe",
@@ -109,7 +115,9 @@ def _get_media_duration(path):
         capture_output=True,
         text=True,
     )
-    return float(result.stdout.strip())
+    duration = float(result.stdout.strip())
+    log_step(f"Detected duration {duration:.2f}s for {path}.")
+    return duration
 
 
 def split_video(video_path=None, max_duration=59, title="Reddit Story"):
@@ -118,6 +126,10 @@ def split_video(video_path=None, max_duration=59, title="Reddit Story"):
     duration = _get_media_duration(source_path)
     part_count = max(1, math.ceil(duration / max_duration))
     output_paths = []
+    log_step(
+        f"Splitting {source_path} into {part_count} part(s) with max duration "
+        f"{max_duration}s."
+    )
 
     for part_index in range(part_count):
         start_time = part_index * max_duration
@@ -142,7 +154,12 @@ def split_video(video_path=None, max_duration=59, title="Reddit Story"):
             "aac",
             str(output_path),
         ]
+        log_step(
+            f"Rendering part {part_index + 1}/{part_count}: "
+            f"start={start_time:.2f}s duration={part_duration:.2f}s."
+        )
         subprocess.run(command, check=True)
+        log_step(f"Finished rendering {output_path}.")
         output_paths.append(output_path)
 
     return output_paths

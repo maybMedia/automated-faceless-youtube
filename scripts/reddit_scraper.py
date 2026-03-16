@@ -1,9 +1,11 @@
 import os
+from random import choice
 
 import praw
 import requests
 from prawcore.exceptions import PrawcoreException
-from random import choice
+
+from scripts.config import log_step
 
 reddit = praw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID", "CLIENT_ID"),
@@ -94,6 +96,7 @@ def _get_story_from_public_json():
     candidates = []
 
     for sub in SUBREDDITS:
+        log_step(f"Requesting public Reddit JSON for r/{sub}.")
         response = requests.get(
             f"https://www.reddit.com/r/{sub}/hot.json",
             params={"limit": POST_LIMIT, "raw_json": 1},
@@ -103,6 +106,7 @@ def _get_story_from_public_json():
         response.raise_for_status()
 
         posts = response.json().get("data", {}).get("children", [])
+        log_step(f"Loaded {len(posts)} posts from r/{sub}.")
         for post in posts:
             post_data = post.get("data", {})
             story = post_data.get("selftext", "").strip()
@@ -129,16 +133,20 @@ def _get_story_from_public_json():
                     }
                 )
 
+    log_step(f"Public Reddit fallback found {len(candidates)} candidate stories.")
     return _select_best_story(candidates)
 
 
 def get_story():
     if not _has_reddit_api_credentials():
+        log_step("Reddit API credentials missing; using public JSON fallback.")
         return _get_story_from_public_json()
 
     try:
+        log_step("Using Reddit API credentials to fetch stories.")
         candidates = []
         for sub in SUBREDDITS:
+            log_step(f"Fetching hot posts from r/{sub} via Reddit API.")
             subreddit = reddit.subreddit(sub)
 
             for post in subreddit.hot(limit=POST_LIMIT):
@@ -162,8 +170,13 @@ def get_story():
                             ),
                         }
                     )
+        log_step(f"Reddit API returned {len(candidates)} candidate stories.")
         return _select_best_story(candidates)
-    except PrawcoreException:
+    except PrawcoreException as exc:
+        log_step(
+            f"Reddit API request failed ({exc.__class__.__name__}); "
+            "falling back to public JSON."
+        )
         return _get_story_from_public_json()
 
 if __name__ == "__main__":

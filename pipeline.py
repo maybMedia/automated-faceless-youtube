@@ -3,6 +3,7 @@ from pathlib import Path
 
 from scripts.reddit_scraper import get_story
 from scripts.caption_generator import generate_captions
+from scripts.config import log_step
 from scripts.script_formatter import format_story
 from scripts.voice_generator import generate_voice
 from scripts.video_generator import create_video, split_video
@@ -19,10 +20,12 @@ TEMP_OUTPUTS = {
 
 
 def cleanup_temp_files(temp_dir="temp"):
+    log_step(f"Cleaning temporary files in {Path(temp_dir).resolve()}.")
     for path in Path(temp_dir).glob("*"):
         if path.is_file() and (
             path.name in TEMP_OUTPUTS or path.name.startswith("video_part")
         ):
+            log_step(f"Deleting {path}.")
             path.unlink()
 
 
@@ -36,42 +39,54 @@ def _get_temp_video_parts(temp_dir="temp"):
 
 
 def generate_video():
+    log_step("Starting video generation pipeline.")
+    log_step("Fetching a Reddit story.")
     post = get_story()
-    print(f"Selected story: {post['title']}")
+    log_step(f"Selected story: {post['title']}")
+    log_step("Formatting the story into a narration script.")
     script = format_story(post)
+    log_step(f"Script formatted ({len(script)} characters).")
 
+    log_step("Generating voice audio.")
     generate_voice(script)
-    print("Voice generated.")
+    log_step("Voice generated.")
 
+    log_step("Generating captions from the audio.")
     generate_captions("temp/voice.wav")
-    print("Captions generated.")
+    log_step("Captions generated.")
 
+    log_step("Rendering the full video.")
     full_video_path = create_video()
-    print(f"Full video generated at {full_video_path}.")
+    log_step(f"Full video generated at {full_video_path}.")
 
+    log_step("Splitting the full video into Shorts-sized parts.")
     video_parts = split_video(full_video_path, title=post["title"])
-    print(f"Split into {len(video_parts)} part(s).")
+    log_step(f"Split into {len(video_parts)} part(s).")
     for video_part in video_parts:
-        print(f"Created {video_part}.")
+        log_step(f"Created {video_part}.")
     return post, video_parts
 
 
 def run_full_pipeline():
+    log_step("Running the full generate + upload pipeline.")
     post, video_parts = generate_video()
 
+    log_step("Uploading generated video parts to YouTube.")
     upload_videos(video_parts, base_title=post["title"])
-    print("Upload completed.")
+    log_step("Upload completed.")
 
     cleanup_temp_files()
-    print("Temporary files deleted.")
+    log_step("Temporary files deleted.")
 
 
 def upload_temp_parts(base_title="Crazy Reddit Story", temp_dir="temp"):
+    log_step(f"Scanning {Path(temp_dir).resolve()} for split video parts.")
     video_parts = _get_temp_video_parts(temp_dir)
-    print(f"Found {len(video_parts)} part(s) in {Path(temp_dir).resolve()}.")
+    log_step(f"Found {len(video_parts)} part(s) in {Path(temp_dir).resolve()}.")
 
+    log_step("Uploading existing temp video parts to YouTube.")
     upload_videos(video_parts, base_title=base_title)
-    print("Upload completed.")
+    log_step("Upload completed.")
 
 
 def build_parser():
@@ -108,6 +123,7 @@ def build_parser():
 def main():
     parser = build_parser()
     args = parser.parse_args()
+    log_step(f"Received command: {args.command}")
 
     if args.command == "generate":
         generate_video()
@@ -119,7 +135,7 @@ def main():
 
     if args.command == "clean":
         cleanup_temp_files()
-        print("Temporary files deleted.")
+        log_step("Temporary files deleted.")
         return
 
     if args.command == "upload-temp":
