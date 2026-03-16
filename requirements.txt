@@ -1,3 +1,6 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:905e32642a991c13ce19854e2b30d32c9f5c77af087c126dbb6b1334f30dd07c
-size 86
+google-api-python-client
+google-auth
+google-auth-oauthlib
+python-dotenv
+praw
+requests
