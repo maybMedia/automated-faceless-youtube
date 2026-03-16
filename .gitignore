@@ -1,3 +1,5 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d00a0461c5a2da803c215a50e79305acae2ebbe8f94f6b0f1ce24b8463514781
-size 131
+client_secret.json
+.env
+youtube_token.json
+.venv
+__pycache__
