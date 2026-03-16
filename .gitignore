@@ -3,3 +3,5 @@ client_secret.json
 youtube_token.json
 .venv
 __pycache__
+assets/background_music.mp3
+assets/gameplay.mp4
